@@ -443,7 +443,35 @@ export default function App() {
 
 // --- SCREENS ---
 
-const SplashScreen = ({ onNext }: { onNext: () => void }) => {
+const const SplashScreen = ({ onNext }: { onNext: () => void }) => {
+  const [screen, setScreen] = useState<'shake1' | 'shake2'>('shake1');
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    videoRef.current?.play().catch(() => {});
+  }, [screen]);
+
+  const handleTap = () => {
+    if (screen === 'shake1') {
+      setScreen('shake2');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black" onClick={handleTap}>
+      <video
+        ref={videoRef}
+        key={screen}
+        src={screen === 'shake1' ? '/shake_1.mp4' : '/shake_2.mp4'}
+        autoPlay
+        muted
+        playsInline
+        onEnded={() => screen === 'shake2' && onNext()}
+        className="w-full h-full object-cover"
+      />
+    </div>
+  );
+};
   const { t } = useTranslation();
   const [isShaking, setIsShaking] = useState(false);
 
@@ -477,6 +505,74 @@ const SplashScreen = ({ onNext }: { onNext: () => void }) => {
 };
 
 const LoginScreen = ({ onLogin }: { onLogin: (pin: string) => void }) => {
+  const [screen, setScreen] = useState<'pin1' | 'pin2'>('pin1');
+  const [pin, setPin] = useState('');
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    videoRef.current?.play().catch(() => {});
+  }, [screen]);
+
+  const handleGo = () => {
+    if (pin === '0609' || pin === '0000') {
+      setScreen('pin2');
+    }
+  };
+
+  if (screen === 'pin2') {
+    return (
+      <div className="fixed inset-0 z-50 bg-black">
+        <video
+          ref={videoRef}
+          src="/pin_2.mp4"
+          autoPlay
+          muted
+          playsInline
+          onEnded={() => onLogin(pin)}
+          className="w-full h-full object-cover"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black">
+      <video
+        src="/pin_1.mp4"
+        autoPlay
+        muted
+        loop
+        playsInline
+        className="w-full h-full object-cover"
+      />
+
+      <div className="absolute inset-0 flex items-center justify-center p-6">
+        <div className="w-full max-w-[320px] bg-black/40 backdrop-blur-xl rounded-[32px] p-6 border border-white/10 space-y-4">
+          <div className="text-center text-white text-xl font-black tracking-[0.3em]">
+            ENTER PIN
+          </div>
+
+          <input
+            type="password"
+            value={pin}
+            onChange={(e) => setPin(e.target.value.replace(/\\D/g, ''))}
+            maxLength={4}
+            placeholder="0609"
+            className="w-full h-14 rounded-2xl bg-white/10 border border-white/10 text-center text-white text-2xl tracking-[0.5em] outline-none placeholder:text-white/40"
+          />
+
+          <button
+            onClick={handleGo}
+            disabled={pin !== '0609' && pin !== '0000'}
+            className="w-full h-14 rounded-2xl bg-orange-500 text-white font-black tracking-[0.2em] disabled:opacity-40 active:scale-95 transition-all"
+          >
+            GO >>>>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
   const { t } = useTranslation();
   const [pin, setPin] = useState('');
   const [error, setError] = useState(false);
