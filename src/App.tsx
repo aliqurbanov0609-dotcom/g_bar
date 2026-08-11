@@ -1,248 +1,140 @@
-import { useState, useRef } from 'react';
+import { useState, useEffect } from 'react';
 
-type Screen = 'splash' | 'login' | 'main';
+type Screen = 'splash_idle' | 'splash_go' | 'login_idle' | 'login_go' | 'main';
+
+const FLAVORS = [
+  { id: 1, label: 'Манго лимонад', emoji: '🥭' },
+  { id: 2, label: 'Кислый цитрус', emoji: '🍋' },
+  { id: 3, label: 'Ягодный микс', emoji: '🍓' },
+  { id: 4, label: 'Мятная свежесть', emoji: '🌿' },
+  { id: 5, label: 'Кокос-тропик', emoji: '🥥' },
+];
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>('splash');
-
-  return (
-    <div className="fixed inset-0 bg-black overflow-hidden">
-      {screen === 'splash' && (
-        <SplashScreen onNext={() => setScreen('login')} />
-      )}
-
-      {screen === 'login' && (
-        <LoginScreen onNext={() => setScreen('main')} />
-      )}
-
-      {screen === 'main' && <MainScreen />}
-    </div>
-  );
-}
-
-// ---------------- SPLASH ----------------
-
-function SplashScreen({ onNext }: { onNext: () => void }) {
-  const [zoom, setZoom] = useState(false);
-  const [showGo, setShowGo] = useState(false);
-  const goRef = useRef<HTMLVideoElement>(null);
-
-  const start = () => {
-    if (zoom) return;
-
-    setZoom(true);
-
-    setTimeout(() => {
-      setShowGo(true);
-      requestAnimationFrame(() => goRef.current?.play());
-    }, 650);
-  };
-
-  return (
-    <div
-      className={`fixed inset-0 overflow-hidden ${
-        zoom ? 'animate-[zoomSplash_650ms_ease-in-out_forwards]' : ''
-      }`}
-      onClick={start}
-    >
-      <video
-        className="absolute inset-0 w-full h-full object-cover"
-        src="/videos/splash_idle.mp4"
-        autoPlay
-        muted
-        loop={!showGo}
-        playsInline
-      />
-
-      {showGo && (
-        <video
-          ref={goRef}
-          className="absolute inset-0 w-full h-full object-cover animate-[fadeIn_250ms_ease-out_forwards]"
-          src="/videos/splash_go.mp4"
-          muted
-          playsInline
-          onEnded={onNext}
-        />
-      )}
-
-      <style>{`
-        @keyframes zoomSplash {
-          from { transform: scale(1); }
-          to { transform: scale(1.2); }
-        }
-
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-      `}</style>
-    </div>
-  );
-}
-
-// ---------------- LOGIN ----------------
-
-function LoginScreen({ onNext }: { onNext: () => void }) {
+  const [screen, setScreen] = useState<Screen>('splash_idle');
+  const [isZooming, setIsZooming] = useState(false);
   const [pin, setPin] = useState('');
-  const [zoom, setZoom] = useState(false);
-  const [showGo, setShowGo] = useState(false);
+  const [activeTab, setActiveTab] = useState<'non' | 'alc' | 'ex'>('non');
 
-  const goRef = useRef<HTMLVideoElement>(null);
+  const CORRECT_PIN = '0609';
 
-  const press = (n: string) => {
-    if (pin.length < 4) setPin(pin + n);
-  };
-
-  const remove = () => setPin(pin.slice(0, -1));
-
-  const submit = () => {
-    if (pin !== '0609') return;
-
-    setZoom(true);
-
+  // ПЛАВНЫЙ ZOOM без черного экрана
+  const zoomTo = (next: Screen) => {
+    setIsZooming(true);
     setTimeout(() => {
-      setShowGo(true);
-      requestAnimationFrame(() => goRef.current?.play());
-    }, 500);
+      setScreen(next);
+      setIsZooming(false);
+    }, 550);
   };
 
-  return (
-    <div
-      className={`fixed inset-0 overflow-hidden ${
-        zoom ? 'animate-[zoomLogin_500ms_ease-in-out_forwards]' : ''
-      }`}
-    >
-      <video
-        className="absolute inset-0 w-full h-full object-cover"
-        src="/videos/login_idle.mp4"
-        autoPlay
-        muted
-        loop={!showGo}
-        playsInline
-      />
+  const pressDigit = (d: string) => {
+    if (pin.length >= 4) return;
+    if ('vibrate' in navigator) navigator.vibrate(20);
+    setPin(p => p + d);
+  };
 
-      {showGo && (
-        <video
-          ref={goRef}
-          className="absolute inset-0 w-full h-full object-cover animate-[fadeIn_250ms_ease-out_forwards]"
-          src="/videos/login_go.mp4"
-          muted
-          playsInline
-          onEnded={onNext}
-        />
-      )}
+  useEffect(() => {
+    if (pin.length === 4 && pin!== CORRECT_PIN) {
+      setTimeout(() => setPin(''), 600);
+    }
+  }, [pin]);
 
-      <div className="absolute inset-0 flex flex-col items-center justify-end pb-10 px-8">
-        {/* dots */}
-        <div className="flex gap-4 mb-8">
-          {[0, 1, 2, 3].map(i => (
-            <div
-              key={i}
-              className={`w-4 h-4 rounded-full border transition-all duration-300 ${
-                pin.length > i
-                  ? 'bg-orange-500 border-orange-400 scale-110 shadow-[0_0_20px_rgba(255,115,0,0.9)]'
-                  : 'bg-white/10 border-white/20'
-              }`}
-            />
-          ))}
-        </div>
+  if (screen!== 'main') {
+    return (
+      <div className="fixed inset-0 bg-black w-screen h-[100dvh] flex justify-center overflow-hidden">
+        <div className={`relative w-full h-full max-w-[430px] bg-black transition-transform duration-[600ms] ease-[cubic-bezier(0.7,0,0.3,1)] ${isZooming? 'scale-[1.3]' : 'scale-100'}`}>
 
-        {/* keypad */}
-        <div className="grid grid-cols-3 gap-4 w-full max-w-[320px]">
-          {[1,2,3,4,5,6,7,8,9].map(n => (
-            <button
-              key={n}
-              onClick={() => press(String(n))}
-              className="h-16 rounded-2xl bg-[#0B1B2C]/80 text-white text-2xl font-bold backdrop-blur-md border border-white/10 active:scale-95 transition-all"
-            >
-              {n}
-            </button>
-          ))}
+          {/* 1. SPLASH */}
+          {screen === 'splash_idle' && (
+            <>
+              <video src="/assets/splash_idle.mp4" autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover" />
+              <button onClick={() => zoomTo('splash_go')} className="absolute bottom-[2%] left-[5%] w-[90%] h-[16%] z-20" />
+            </>
+          )}
+          {screen === 'splash_go' && (
+            <video src="/assets/splash_go.mp4" autoPlay muted playsInline className="absolute inset-0 w-full h-full object-cover" onEnded={() => setScreen('login_idle')} />
+          )}
 
-          <div />
+          {/* 2. LOGIN - ТВОЕ ВИДЕО + НЕВИДИМЫЕ КНОПКИ ПОВЕРХ */}
+          {screen === 'login_idle' && (
+            <>
+              <video src="/assets/login_idle.mp4" autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover" />
 
-          <button
-            onClick={() => press('0')}
-            className="h-16 rounded-2xl bg-[#0B1B2C]/80 text-white text-2xl font-bold backdrop-blur-md border border-white/10 active:scale-95 transition-all"
-          >
-            0
-          </button>
+              {/* НЕВИДИМЫЕ КНОПКИ ПОВЕРХ ТВОЕЙ КЛАВИАТУРЫ ИЗ ВИДЕО */}
+              <div className="absolute inset-0 z-20">
+                {/* Ряд 1 2 3 */}
+                <button onClick={() => pressDigit('1')} className="absolute left-[17%] top-[45.5%] w-[20%] h-[8%]" />
+                <button onClick={() => pressDigit('2')} className="absolute left-[40%] top-[45.5%] w-[20%] h-[8%]" />
+                <button onClick={() => pressDigit('3')} className="absolute left-[63%] top-[45.5%] w-[20%] h-[8%]" />
 
-          <button
-            onClick={remove}
-            className="h-16 rounded-2xl bg-[#0B1B2C]/80 text-white text-xl font-bold backdrop-blur-md border border-white/10 active:scale-95 transition-all"
-          >
-            ⌫
-          </button>
-        </div>
+                {/* Ряд 4 5 6 */}
+                <button onClick={() => pressDigit('4')} className="absolute left-[17%] top-[56%] w-[20%] h-[8%]" />
+                <button onClick={() => pressDigit('5')} className="absolute left-[40%] top-[56%] w-[20%] h-[8%]" />
+                <button onClick={() => pressDigit('6')} className="absolute left-[63%] top-[56%] w-[20%] h-[8%]" />
 
-        {/* GO */}
-        <button
-          onClick={submit}
-          disabled={pin !== '0609'}
-          className={`w-full max-w-[320px] h-14 mt-6 rounded-2xl font-bold text-lg transition-all duration-300 ${
-            pin === '0609'
-              ? 'bg-orange-500 text-white animate-[pulseGo_1.2s_ease-in-out_infinite]'
-              : 'bg-white/10 text-white/40'
-          }`}
-        >
-          GO
-        </button>
-      </div>
+                {/* Ряд 7 8 9 */}
+                <button onClick={() => pressDigit('7')} className="absolute left-[17%] top-[66.5%] w-[20%] h-[8%]" />
+                <button onClick={() => pressDigit('8')} className="absolute left-[40%] top-[66.5%] w-[20%] h-[8%]" />
+                <button onClick={() => pressDigit('9')} className="absolute left-[63%] top-[66.5%] w-[20%] h-[8%]" />
 
-      <style>{`
-        @keyframes zoomLogin {
-          from { transform: scale(1); }
-          to { transform: scale(1.12); }
-        }
+                {/* 0 и стрелка */}
+                <button onClick={() => pressDigit('0')} className="absolute left-[40%] top-[77%] w-[20%] h-[8%]" />
+                <button onClick={() => setPin(p => p.slice(0,-1))} className="absolute left-[63%] top-[77%] w-[20%] h-[8%]" />
 
-        @keyframes pulseGo {
-          0% {
-            transform: scale(1);
-            box-shadow: 0 0 10px rgba(255,115,0,.5);
-          }
+                {/* Точки пина - показываем поверх видео */}
+                <div className="absolute left-0 top-[34%] w-full flex justify-center gap-3 pointer-events-none">
+                  {[0,1,2,3].map(i => (
+                    <div key={i} className={`w-[42px] h-[42px] rounded-full transition-all duration-200 ${i < pin.length? 'bg-[#ffcc66] shadow-[0_0_20px_#ffcc66] scale-110' : 'bg-transparent'}`} />
+                  ))}
+                </div>
 
-          50% {
-            transform: scale(1.04);
-            box-shadow:
-              0 0 24px rgba(255,115,0,1),
-              0 0 48px rgba(29,139,255,.8);
-          }
+                {/* GO - появляется и пульсирует когда введен 0609 */}
+                <button
+                  onClick={() => pin === CORRECT_PIN && zoomTo('login_go')}
+                  className={`absolute bottom-[5%] left-[5%] w-[90%] h-[10%] rounded-full transition-all duration-500 ${pin === CORRECT_PIN? 'bg-[#ffcc66]/20 shadow-[0_0_40px_rgba(255,204,102,0.9)] animate-pulse scale-[1.02]' : 'bg-transparent'}`}
+                />
+              </div>
+            </>
+          )}
 
-          100% {
-            transform: scale(1);
-            box-shadow: 0 0 10px rgba(255,115,0,.5);
-          }
-        }
-      `}</style>
-    </div>
-  );
-}
-
-// ---------------- MAIN ----------------
-
-function MainScreen() {
-  return (
-    <div className="fixed inset-0 bg-[#07111E] flex items-center justify-center">
-      <div className="animate-[logoZoom_450ms_ease-out_forwards]">
-        <div className="w-32 h-32 rounded-full bg-[#13263A] border border-[#1D8BFF]/40 flex items-center justify-center shadow-[0_0_40px_rgba(29,139,255,.4)]">
-          <span className="text-5xl font-black text-orange-500">G</span>
+          {screen === 'login_go' && (
+            <video src="/assets/login_go.mp4" autoPlay muted playsInline className="absolute inset-0 w-full h-full object-cover" onEnded={() => setScreen('main')} />
+          )}
         </div>
       </div>
+    );
+  }
 
-      <style>{`
-        @keyframes logoZoom {
-          from {
-            transform: scale(1);
-            opacity: 1;
-          }
-
-          to {
-            transform: scale(1.25);
-            opacity: 0;
-          }
-        }
-      `}</style>
+  // MAIN твой G-BAR
+  return (
+    <div className="min-h-[100dvh] bg-[#0f1f2c] text-white flex justify-center p-4">
+      <div className="w-full max-w-[420px]">
+        <div className="flex justify-between items-center mt-2 mb-6">
+          <div className="flex items-center gap-2 bg-[#1a3246]/80 px-4 py-2 rounded-full border border-white/10">
+            <img src="/icon.png" alt="icon" className="w-5 h-5 rounded-full object-cover" />
+            <span className="tracking-[0.2em] text-[13px] font-bold text-white/90">GURBANOV</span>
+          </div>
+          <button onClick={() => { setPin(''); setScreen('splash_idle'); }} className="bg-[#1a3246] border border-[#ff8a5b]/30 text-[#ff8a5b] px-5 py-2 rounded-full text-sm font-bold">EXIT</button>
+        </div>
+        <h1 className="text-[#ff8a5b] font-black text-2xl tracking-wider mb-4 ml-1">AI MIXMASTER</h1>
+        <div className="bg-[#162c3e]/90 rounded-[28px] p-4 border border-white/5">
+          <div className="flex bg-[#0f2232] rounded-full p-1 mb-6">
+            <button onClick={() => setActiveTab('non')} className={`flex-1 py-2.5 rounded-full text-[13px] font-bold ${activeTab === 'non'? 'bg-[#ff8a5b] text-white' : 'text-white/50'}`}>БЕЗАЛКОГО...</button>
+            <button onClick={() => setActiveTab('alc')} className={`flex-1 py-2.5 rounded-full text-[13px] font-bold ${activeTab === 'alc'? 'bg-[#ff8a5b] text-white' : 'text-white/50'}`}>АЛКОГОЛЬН...</button>
+            <button onClick={() => setActiveTab('ex')} className={`flex-1 py-2.5 rounded-full text-[13px] font-bold ${activeTab === 'ex'? 'bg-[#ff8a5b] text-white' : 'text-white/50'}`}>ЭКСКЛЮЗИВ</button>
+          </div>
+          <p className="text-white/40 text-[15px] mb-4 px-1">Пин: {pin} | Введи 0609</p>
+          <div className="flex flex-wrap gap-2.5 mb-5">
+            {FLAVORS.map(f => (
+              <button key={f.id} onClick={() => {}} className="px-3.5 py-2 rounded-full text-[13px] border bg-[#1e3a4f] border-white/10 text-white/70">{f.emoji} {f.label}</button>
+            ))}
+          </div>
+          <div className="bg-[#0f2232] rounded-[20px] p-4 border border-white/5 mb-6">
+            <textarea defaultValue="Сладкий ягодный лимонад" className="w-full bg-transparent outline-none resize-none text-[15px] min-h-[80px] text-white/90" />
+          </div>
+          <button className="w-full h-[64px] rounded-full bg-gradient-to-b from-[#5b8def] to-[#2c5ab5] border-[3px] border-[#8bb3ff]/50 flex items-center justify-center font-black">ВЗБОЛТАТЬ</button>
+        </div>
+      </div>
     </div>
   );
 }
