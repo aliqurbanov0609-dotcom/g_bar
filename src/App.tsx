@@ -362,7 +362,7 @@ export default function App() {
       `}</style>
 
       {/* Mobile Device Mockup Container */}
-      <div className="w-full max-w-[400px] min-h-[100dvh] md:my-auto md:rounded-[40px] app-container overflow-hidden flex flex-col relative md:border-[8px] md:border-[#0e161c]">
+      <div className="w-full w-full max-w-[400px] min-h-[100dvh] min-h-[100dvh] md:my-auto md:rounded-[40px] app-container overflow-hidden flex flex-col relative md:border-[8px] md:border-[#0e161c]">
         
         {appState === 'splash' && <SplashScreen onNext={() => setAppState('login')} />}
         {appState === 'login' && <LoginScreen onLogin={(pin) => { 
